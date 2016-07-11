@@ -1,60 +1,61 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"bytes"
 	"strconv"
-	"io/ioutil"
-	"encoding/json"
 
 	"goji.io"
 	"goji.io/pat"
-	"golang.org/x/net/context"
 	"goji.io/pattern"
+	"golang.org/x/net/context"
+
+	"github.com/tealoid/YoutubeExercise/private"
 )
 
-
 type pageInfo struct {
-	TotalResults	int			`json:"totalResults"`
-	ResultsPerPage	int			`json:"resultsPerPage"`
+	TotalResults   int `json:"totalResults"`
+	ResultsPerPage int `json:"resultsPerPage"`
 }
 
 type item struct {
-	ID		map[string]string	`json:"id"`
-	Snippet		snippet			`json:"snippet"`
+	ID      map[string]string `json:"id"`
+	Snippet snippet           `json:"snippet"`
 }
 
 type snippet struct {
-	PublishedAt	string			`json:"publishedAt"`
-	ChannelId	string			`json:"channelId"`
-	Title		string			`json:"title"`
-	Description	string			`json:"description"`
-	Thumbnails	map[string]thumbnail	`json:"thumbnails"`
-	ChannelTitle	string			`json:"channelTitle"`
+	PublishedAt  string               `json:"publishedAt"`
+	ChannelID    string               `json:"channelId"`
+	Title        string               `json:"title"`
+	Description  string               `json:"description"`
+	Thumbnails   map[string]thumbnail `json:"thumbnails"`
+	ChannelTitle string               `json:"channelTitle"`
 }
 
 type thumbnail struct {
-	URL		string			`json:"url"`
-	Width		int			`json:"width"`
-	Height		int			`json:"height"`
+	URL    string `json:"url"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
 }
 
 type respType struct {
-	Kind		string			`json:"kind"`
-	Etag		string			`json:"etag"`
-	NextPageToken	string			`json:"nextPageToken"`
-	PageInfo 	pageInfo 		`json:"pageInfo"`
-	RegionCode	string			`json:"regionCode"`
-	Items		[]item			`json:"items"`
+	Kind          string   `json:"kind"`
+	Etag          string   `json:"etag"`
+	NextPageToken string   `json:"nextPageToken"`
+	PageInfo      pageInfo `json:"pageInfo"`
+	RegionCode    string   `json:"regionCode"`
+	Items         []item   `json:"items"`
 }
 
 type ytPageItem struct {
-	Link		string
-	Title		string
-	Description	string
-	Image		string
+	Link        string
+	Title       string
+	Description string
+	Image       string
 }
 
 const youtubeAPIURL = "https://www.googleapis.com/youtube/v3/search?part=snippet&order=relevance&key="
@@ -74,14 +75,13 @@ func main() {
 
 //This does nothing important. Just added for giggles.
 func middleware(h goji.Handler) goji.Handler {
-	t := func(ctx context.Context, w http.ResponseWriter, r *http.Request){
+	t := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Request URI: ", r.RequestURI)
 		fmt.Println("Context Values: ", ctx.Value(pattern.AllVariables))
 		h.ServeHTTPC(ctx, w, r)
 	}
 	return goji.HandlerFunc(t)
 }
-
 
 func handleQuery(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
@@ -121,7 +121,7 @@ func handleQuery(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Get(query)
 	defer resp.Body.Close()
-	if(err != nil) {
+	if err != nil {
 		fmt.Println(err)
 		w.Write([]byte("Sorry, error."))
 		return
@@ -169,10 +169,10 @@ func servePage(w http.ResponseWriter, pageItems []ytPageItem, pInfo pageInfo) {
 
 func handleItem(i item) ytPageItem {
 	//"kind" is a string youtube#{item type}, so cut youtube#.
-	var tag string = i.ID["kind"][8:]
+	tag := i.ID["kind"][8:]
 	var link string
 
-	switch(tag) {
+	switch tag {
 	case "video":
 		link = fmt.Sprintf(`http://youtube.com/watch?v=%s`, i.ID["videoId"])
 
@@ -199,7 +199,7 @@ func queryBuilder(q, t, maxResults string) string {
 	if _, err := strconv.Atoi(maxResults); err != nil {
 		maxResults = "10"
 	}
-	buffer.WriteString(fmt.Sprintf("%s%s", youtubeAPIURL, DevAPIKey))
+	buffer.WriteString(fmt.Sprintf("%s%s", youtubeAPIURL, private.DevAPIKey))
 	buffer.WriteString(fmt.Sprintf("&q=%s", url.QueryEscape(q)))
 	buffer.WriteString(fmt.Sprintf("&type=%s", url.QueryEscape(t)))
 	buffer.WriteString(fmt.Sprintf("&maxResults=%s", url.QueryEscape(maxResults)))

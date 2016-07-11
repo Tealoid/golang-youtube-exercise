@@ -25,4 +25,4 @@ _testmain.go
 
 #Custom
 .idea/*
-private.go
+/private/*
